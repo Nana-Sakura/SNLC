@@ -103,8 +103,7 @@ ASTPtr Parser::parseTypeDec() {
     auto node = makeNode(NodeKind::TYPE_DEC, peek().line);
     if (check(TokenType::KW_TYPE)) {
         advance(); // 消耗 TYPE
-        parseTypeDecList(); // 递归解析，挂到 node->children
-        // 简化：TypeDecList 返回多个子节点，这里直接内联
+        node->children.push_back(parseTypeDecList()); // 把整组别名声明挂入
     }
     return node;
 }

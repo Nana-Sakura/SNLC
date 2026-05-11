@@ -13,19 +13,23 @@ using ASTList = std::vector<ASTPtr>;
 enum class TypeKind { INTEGER, CHAR, ARRAY, RECORD, NAME };
 
 struct TypeDesc {
-    TypeKind kind;
+    TypeKind kind = TypeKind::INTEGER;
     // ARRAY
     int low = 0, top = 0;
-    std::unique_ptr<TypeDesc> elemType;
+    std::shared_ptr<TypeDesc> elemType;
     // RECORD
-    struct Field { std::string name; std::unique_ptr<TypeDesc> type; };
+    struct Field { std::string name; std::shared_ptr<TypeDesc> type; };
     std::vector<Field> fields;
     // NAME（类型别名，待语义阶段解析）
     std::string name;
 
-    static std::unique_ptr<TypeDesc> makeInt();
-    static std::unique_ptr<TypeDesc> makeChar();
-    static std::unique_ptr<TypeDesc> makeName(const std::string& n);
+    TypeDesc() = default;
+    TypeDesc(const TypeDesc&) = default;
+    TypeDesc& operator=(const TypeDesc&) = default;
+
+    static std::shared_ptr<TypeDesc> makeInt();
+    static std::shared_ptr<TypeDesc> makeChar();
+    static std::shared_ptr<TypeDesc> makeName(const std::string& n);
 };
 
 // ─── AST 节点种类 ──────────────────────────────────────────────────────────────

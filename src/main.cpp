@@ -92,6 +92,9 @@ int main(int argc, char* argv[]) {
     // ── 阶段四：代码生成 ────────────────────────────────────────────────────
     if (verbose) std::cout << "\n=== 代码生成 ===\n";
     CodeGen cg(sem.globalScope());
+    // 把过程作用域注册给 CodeGen（用于切换符号表）
+    for (auto& [name, scope] : sem.procScopes())
+        cg.registerProcScope(name, scope);
     std::string asmCode = cg.generate(ast.get());
 
     // 写输出文件

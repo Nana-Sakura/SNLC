@@ -2,19 +2,19 @@
 #include <iostream>
 
 // ─── TypeDesc 工厂 ─────────────────────────────────────────────────────────────
-std::unique_ptr<TypeDesc> TypeDesc::makeInt() {
+std::shared_ptr<TypeDesc> TypeDesc::makeInt() {
     auto td = std::make_unique<TypeDesc>();
     td->kind = TypeKind::INTEGER;
     return td;
 }
 
-std::unique_ptr<TypeDesc> TypeDesc::makeChar() {
+std::shared_ptr<TypeDesc> TypeDesc::makeChar() {
     auto td = std::make_unique<TypeDesc>();
     td->kind = TypeKind::CHAR;
     return td;
 }
 
-std::unique_ptr<TypeDesc> TypeDesc::makeName(const std::string& n) {
+std::shared_ptr<TypeDesc> TypeDesc::makeName(const std::string& n) {
     auto td = std::make_unique<TypeDesc>();
     td->kind = TypeKind::NAME;
     td->name = n;
