@@ -2,6 +2,8 @@
 #include "../include/parser.h"
 #include "../include/semantic.h"
 #include "../include/codegen.h"
+#include "../include/optimizer.h"
+#include "../include/taccodegen.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -30,6 +32,7 @@ int main(int argc, char* argv[]) {
 
     std::string srcFile, outFile = "out.asm";
     bool lexOnly = false, parseOnly = false, semOnly = false, verbose = false;
+    bool useRegAlloc = false;
 
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "-o") == 0 && i + 1 < argc) outFile = argv[++i];
@@ -37,6 +40,7 @@ int main(int argc, char* argv[]) {
         else if (std::strcmp(argv[i], "--parse-only") == 0) parseOnly = true;
         else if (std::strcmp(argv[i], "--sem-only") == 0)   semOnly = true;
         else if (std::strcmp(argv[i], "-v") == 0)           verbose = true;
+        else if (std::strcmp(argv[i], "--opt-regalloc") == 0) useRegAlloc = true;
         else srcFile = argv[i];
     }
     if (srcFile.empty()) { printUsage(argv[0]); return 1; }
@@ -89,13 +93,44 @@ int main(int argc, char* argv[]) {
     }
     if (semOnly) return 0;
 
+    // ── 阶段三·五：优化（常量折叠 + 代数化简）──────────────────────────
+    Optimizer opt;
+    opt.optimize(ast.get());
+    if (verbose) {
+        std::cout << "\n=== 优化 ===\n";
+        std::cout << "  常量折叠: " << opt.foldCount() << " 次\n";
+        std::cout << "  代数化简: " << opt.simplifyCount() << " 次\n";
+    }
+
     // ── 阶段四：代码生成 ────────────────────────────────────────────────────
     if (verbose) std::cout << "\n=== 代码生成 ===\n";
-    CodeGen cg(sem.globalScope());
-    // 把过程作用域注册给 CodeGen（用于切换符号表）
-    for (auto& [name, scope] : sem.procScopes())
-        cg.registerProcScope(name, scope);
-    std::string asmCode = cg.generate(ast.get());
+    std::string asmCode;
+    if (useRegAlloc) {
+        // 图着色寄存器分配路径
+        TACCodeGen cg(sem.globalScope());
+        for (auto& [name, scope] : sem.procScopes())
+            cg.registerProcScope(name, scope);
+        // 传递参数顺序（从旧 CodeGen 的 procParamOrder_ 复用语义信息）
+        // 这里直接在 TACCodeGen 里重建（已有 procScopeMap_ 和 AST）
+        for (auto& [name, scope] : sem.procScopes()) {
+            std::vector<Symbol*> order;
+            for (auto& [n, s] : scope->table)
+                if (s.kind == SymKind::PARAM || s.kind == SymKind::VAR_PARAM)
+                    order.push_back(&s);
+            std::sort(order.begin(), order.end(),
+                [](Symbol* a, Symbol* b){ return a->offset > b->offset; });
+            cg.registerProcParamOrder(name, order);
+        }
+        asmCode = cg.generate(ast.get());
+        if (verbose)
+            std::cout << "  spill 次数: " << cg.spillCount() << "\n";
+    } else {
+        // 原始路径（push/pop 栈）
+        CodeGen cg(sem.globalScope());
+        for (auto& [name, scope] : sem.procScopes())
+            cg.registerProcScope(name, scope);
+        asmCode = cg.generate(ast.get());
+    }
 
     // 写输出文件
     std::ofstream out(outFile);
