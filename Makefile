@@ -68,6 +68,10 @@ test: $(TARGET)
 	$(call run_test,[RA]proc,--opt-regalloc tests/proc_test.snl,7 3 55,)
 	$(call run_test,[RA]fibsum(n=8),--opt-regalloc tests/fibsum.snl,33,8)
 	@echo "============================================"
+	@echo "  LICM 循环不变式外提测试："
+	@echo "============================================"
+	$(call run_test,licm(22 22 22 60),tests/licm_test.snl,22 22 22 60,)
+	@echo "============================================"
 
 # 词法分析单独验证
 lex-test: $(TARGET)

@@ -93,13 +93,14 @@ int main(int argc, char* argv[]) {
     }
     if (semOnly) return 0;
 
-    // ── 阶段三·五：优化（常量折叠 + 代数化简）──────────────────────────
+    // ── 阶段三·五：优化（常量折叠 + 代数化简 + LICM）────────────────────
     Optimizer opt;
-    opt.optimize(ast.get());
+    opt.optimize(ast.get(), sem.globalScope()); // 传入 scope 供 LICM 注册临时变量
     if (verbose) {
         std::cout << "\n=== 优化 ===\n";
-        std::cout << "  常量折叠: " << opt.foldCount() << " 次\n";
-        std::cout << "  代数化简: " << opt.simplifyCount() << " 次\n";
+        std::cout << "  常量折叠:     " << opt.foldCount()    << " 次\n";
+        std::cout << "  代数化简:     " << opt.simplifyCount()<< " 次\n";
+        std::cout << "  LICM 外提:    " << opt.licmCount()    << " 次\n";
     }
 
     // ── 阶段四：代码生成 ────────────────────────────────────────────────────
