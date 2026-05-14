@@ -16,6 +16,8 @@ static void printUsage(const char* prog) {
               << "  --lex-only     只做词法分析并打印 Token\n"
               << "  --parse-only   只做词法+语法分析并打印 AST\n"
               << "  --sem-only     词法+语法+语义分析（不生成代码）\n"
+              << "  --opt-regalloc 开启 TAC + 寄存器分配（默认开启）\n"
+              << "  --no-regalloc  关闭寄存器分配，使用原始代码生成\n"
               << "  -v             详细模式（打印各阶段信息）\n";
 }
 
@@ -32,7 +34,7 @@ int main(int argc, char* argv[]) {
 
     std::string srcFile, outFile = "out.asm";
     bool lexOnly = false, parseOnly = false, semOnly = false, verbose = false;
-    bool useRegAlloc = false;
+    bool useRegAlloc = true;
 
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "-o") == 0 && i + 1 < argc) outFile = argv[++i];
@@ -41,6 +43,7 @@ int main(int argc, char* argv[]) {
         else if (std::strcmp(argv[i], "--sem-only") == 0)   semOnly = true;
         else if (std::strcmp(argv[i], "-v") == 0)           verbose = true;
         else if (std::strcmp(argv[i], "--opt-regalloc") == 0) useRegAlloc = true;
+        else if (std::strcmp(argv[i], "--no-regalloc") == 0) useRegAlloc = false;
         else srcFile = argv[i];
     }
     if (srcFile.empty()) { printUsage(argv[0]); return 1; }

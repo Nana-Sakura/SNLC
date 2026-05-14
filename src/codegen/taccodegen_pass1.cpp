@@ -67,6 +67,9 @@ std::string TACCodeGen::generate(ASTNode* root) {
     emitData(".data");
     emitData("__newline: .asciiz \"\\n\"");
     out_ << ".text\n.globl main\n\n";
+    // MARS starts at the first .text instruction; jump to main explicitly.
+    out_ << "j     main\n";
+    out_ << "nop\n\n";
     tacProgram(root);
     return data_.str() + "\n" + out_.str();
 }
