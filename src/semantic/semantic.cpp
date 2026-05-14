@@ -105,17 +105,28 @@ SemanticAnalyzer::buildTypeDesc(ASTNode* node)
       td->kind = TypeKind::RECORD;
 
       std::vector<ASTNode*> pendingIds;
+      // 这里的遍历顺序是：先出现若干
+      // SimpleVar（字段名），随后出现对应的类型节点， 再出现下一组字段名 …
+      // 如此交替。原实现在遇到类型节点时先检查 curType 是否已存在，
+      // 导致第一次字段（如 integer x）
+      // 没有被正确关联到其类型，进而导致后续字段的类型错位。
+      // 修正思路：在遇到非
+      // SIMPLE_VAR（即类型节点）时，先构建该类型，然后把之前收集的 pendingIds
+      // 立即绑定到该类型，最后再准备收集下一组字段。
       std::shared_ptr<TypeDesc> curType;
 
       for(auto& child : node->children)
         {
           if(child->kind == NodeKind::SIMPLE_VAR)
             {
+              // 收集字段名，等待后面的类型节点来决定它们的类型
               pendingIds.push_back(child.get());
             }
           else
             {
-              // 先提交上一组 id
+              // 先把当前类型节点解析为 TypeDesc
+              curType = buildTypeDesc(child.get());
+              // 然后把之前收集的字段名全部绑定到该类型
               if(curType && !pendingIds.empty())
                 {
                   for(auto* id : pendingIds)
@@ -127,10 +138,9 @@ SemanticAnalyzer::buildTypeDesc(ASTNode* node)
                     }
                   pendingIds.clear();
                 }
-              curType = buildTypeDesc(child.get());
             }
         }
-      // 提交最后一组
+      // 若最后一次循环结束后仍有未绑定的字段（理论上不会出现），也进行一次绑定
       if(curType && !pendingIds.empty())
         {
           for(auto* id : pendingIds)

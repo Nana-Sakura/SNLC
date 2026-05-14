@@ -203,6 +203,20 @@ CodeGen::genProcDec(ASTNode* node)
             }
           // 记录声明顺序，供 genCall 使用
           procParamOrder_[proc->name] = orderedParams;
+
+          // 从调用者栈中取第 5 个及之后的参数
+          if(orderedParams.size() > 4)
+            {
+              int paramCount = (int)orderedParams.size();
+              for(int pi = 4; pi < paramCount; ++pi)
+                {
+                  int srcOff = 4 * (paramCount - pi); // 相对 $fp 的正偏移
+                  emitComment("load stack arg " + orderedParams[pi]->name);
+                  emit("lw    $t8, " + std::to_string(srcOff) + "($fp)");
+                  emit("sw    $t8, "
+                       + std::to_string(orderedParams[pi]->offset) + "($fp)");
+                }
+            }
         }
 
       if(proc->children.size() > 2)

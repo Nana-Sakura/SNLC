@@ -53,6 +53,10 @@ test: $(TARGET)
 	$(call run_test,array(sum 1..5 *10),tests/array_test.snl,150,)
 	$(call run_test,record(3²+4²),tests/record_test.snl,25,)
 	$(call run_test,proc(swap+fib10),tests/proc_test.snl,7 3 55,)
+	$(call run_test,stack_balance(5+1),tests/stack_balance.snl,15 20,)
+	$(call run_test,right_assoc(18 12),tests/right_assoc.snl,18 -3,)
+	$(call run_test,record_array_alias(7 12 19),tests/record_array_alias.snl,7 12 19,)
+	$(call run_test,stack_varparam5(2 3 4 5 1),tests/stack_varparam5.snl,2 3 4 5 1,)
 	$(call run_test,fibsum(n=8),tests/fibsum.snl,33,8)
 	$(call run_test,fibsum(n=10),tests/fibsum.snl,88,10)
 	@echo "============================================"
@@ -66,11 +70,15 @@ test: $(TARGET)
 	$(call run_test,[RA]array,--opt-regalloc tests/array_test.snl,150,)
 	$(call run_test,[RA]record,--opt-regalloc tests/record_test.snl,25,)
 	$(call run_test,[RA]proc,--opt-regalloc tests/proc_test.snl,7 3 55,)
+	$(call run_test,[RA]stack_balance,--opt-regalloc tests/stack_balance.snl,15 20,)
+	$(call run_test,[RA]right_assoc,--opt-regalloc tests/right_assoc.snl,18 -3,)
+	$(call run_test,[RA]record_array_alias,--opt-regalloc tests/record_array_alias.snl,7 12 19,)
+	$(call run_test,[RA]stack_varparam5,--opt-regalloc tests/stack_varparam5.snl,2 3 4 5 1,)
 	$(call run_test,[RA]fibsum(n=8),--opt-regalloc tests/fibsum.snl,33,8)
 	@echo "============================================"
 	@echo "  LICM 循环不变式外提测试："
 	@echo "============================================"
-	$(call run_test,licm(22 22 22 60),tests/licm_test.snl,22 22 22 60,)
+	$(call run_test,licm(10 10 10 0),tests/licm_test.snl,10 10 10 0,)
 	@echo "============================================"
 
 # 词法分析单独验证

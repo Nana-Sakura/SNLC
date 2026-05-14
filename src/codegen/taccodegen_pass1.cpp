@@ -250,6 +250,21 @@ TACCodeGen::tacProcDec(ASTNode* node)
                                   "# save_arg " + sym->name));
               ++ai;
             }
+
+          if(pit->second.size() > 4)
+            {
+              int paramCount = (int)pit->second.size();
+              for(int pi = 4; pi < paramCount; ++pi)
+                {
+                  int srcOff = 4 * (paramCount - pi); // 相对 $fp 的正偏移
+                  std::string tmp = newVReg();
+                  emit(TACInstr::make(TACOp::LOAD, tmp, "$fp", "", srcOff,
+                                      "# load_stack_arg"));
+                  emit(TACInstr::make(TACOp::STORE, "", tmp, "$fp",
+                                      pit->second[pi]->offset,
+                                      "# save_arg " + pit->second[pi]->name));
+                }
+            }
         }
 
       if(proc->children.size() > 2)
@@ -699,7 +714,7 @@ TACCodeGen::tacFieldAddr(ASTNode* node)
         {
           if(f.name == node->name)
             break;
-            fieldOff += typeSize(f.type.get());
+          fieldOff += typeSize(f.type.get());
         }
     }
 
