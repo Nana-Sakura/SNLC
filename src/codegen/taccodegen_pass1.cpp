@@ -2,6 +2,35 @@
 #include <stdexcept>
 #include <taccodegen.h>
 
+static int
+typeSize(const TypeDesc* td)
+{
+  if(!td)
+    return 4;
+  switch(td->kind)
+    {
+    case TypeKind::INTEGER:
+      return 4;
+    case TypeKind::CHAR:
+      return 4;
+    case TypeKind::ARRAY:
+      {
+        int n = std::max(1, td->top - td->low + 1);
+        return n * typeSize(td->elemType.get());
+      }
+    case TypeKind::RECORD:
+      {
+        int total = 0;
+        for(auto& f : td->fields)
+          total += typeSize(f.type.get());
+        return total;
+      }
+    case TypeKind::NAME:
+      return 4;
+    }
+  return 4;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 工具
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -670,7 +699,7 @@ TACCodeGen::tacFieldAddr(ASTNode* node)
         {
           if(f.name == node->name)
             break;
-          fieldOff += 4;
+            fieldOff += typeSize(f.type.get());
         }
     }
 

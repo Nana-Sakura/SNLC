@@ -56,6 +56,35 @@ frameSize(int localBytes)
   return (total + 7) & ~7;    // 8 字节对齐
 }
 
+static int
+typeSize(const TypeDesc* td)
+{
+  if(!td)
+    return 4;
+  switch(td->kind)
+    {
+    case TypeKind::INTEGER:
+      return 4;
+    case TypeKind::CHAR:
+      return 4;
+    case TypeKind::ARRAY:
+      {
+        int n = std::max(1, td->top - td->low + 1);
+        return n * typeSize(td->elemType.get());
+      }
+    case TypeKind::RECORD:
+      {
+        int total = 0;
+        for(auto& f : td->fields)
+          total += typeSize(f.type.get());
+        return total;
+      }
+    case TypeKind::NAME:
+      return 4;
+    }
+  return 4;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 主入口
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -337,6 +366,8 @@ CodeGen::genCall(ASTNode* node)
       ++i;
     }
   emit("jal   " + node->name);
+  if(i > 4)
+    emit("addiu $sp, $sp, " + std::to_string((i - 4) * 4));
   (void)procSym;
 }
 
@@ -794,7 +825,7 @@ CodeGen::genFieldAddr(ASTNode* node)
         {
           if(f.name == node->name)
             break;
-          fieldOff += 4; // 每字段 4 字节（word 对齐）
+          fieldOff += typeSize(f.type.get());
         }
     }
 

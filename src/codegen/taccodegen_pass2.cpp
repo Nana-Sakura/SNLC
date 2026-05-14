@@ -258,6 +258,8 @@ TACCodeGen::emitInstr(const TACInstr& I)
     case TACOp::CALL:
       emitLine("jal   " + I.src1);
       emitLine("nop");
+      if(I.imm > 4)
+        emitLine("addiu $sp, $sp, " + std::to_string((I.imm - 4) * 4));
       break;
 
     case TACOp::RETURN:
