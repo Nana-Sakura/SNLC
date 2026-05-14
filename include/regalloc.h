@@ -35,11 +35,11 @@ enum class TACOp
   JUMP,       // goto label
   BRANCH_EQ0, // if src == 0 goto label
               // 调用约定
-  PARAM,  // param src  （设置参数）
-  CALL,   // dst = call label, nargs
-  RETURN, // return src
-          // 系统调用
-  SYSCALL, // syscall imm
+  PARAM,      // param src  （设置参数）
+  CALL,       // dst = call label, nargs
+  RETURN,     // return src
+              // 系统调用
+  SYSCALL,    // syscall imm
   NOP
 };
 

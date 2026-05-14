@@ -1,7 +1,7 @@
 #pragma once
-#include "ast.h"
-#include "token.h"
+#include <ast.h>
 #include <string>
+#include <token.h>
 #include <vector>
 
 // ─── Parser：Token 流 → AST（LL(1)

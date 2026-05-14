@@ -1,6 +1,6 @@
 #pragma once
-#include "ast.h"
-#include "semantic.h"
+#include <ast.h>
+#include <semantic.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>

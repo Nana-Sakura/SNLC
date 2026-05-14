@@ -1,8 +1,8 @@
 #pragma once
-#include "ast.h"
-#include "regalloc.h"
-#include "semantic.h"
 #include <algorithm>
+#include <ast.h>
+#include <regalloc.h>
+#include <semantic.h>
 #include <sstream>
 #include <string>
 #include <unordered_map>
