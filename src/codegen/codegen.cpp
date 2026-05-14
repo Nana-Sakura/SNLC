@@ -52,6 +52,10 @@ void CodeGen::genProgram(ASTNode* node) {
     if (!node || node->children.size() < 3) return;
     ASTNode* decl = node->children[1].get();
 
+    // MARS starts at the first instruction in .text; jump to main explicitly.
+    emit("j     main");
+    emit("nop");
+
     // 先生成所有过程（嵌套在 DeclarePart->ProcDec 里）
     if (decl && decl->children.size() >= 3)
         genProcDec(decl->children[2].get());
