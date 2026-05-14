@@ -38,6 +38,7 @@ std::vector<std::string> RegAllocator::getUses(const TACInstr& i) {
     switch (i.op) {
         case TACOp::ADD: case TACOp::SUB: case TACOp::MUL:
         case TACOp::DIV: case TACOp::SLT: case TACOp::SEQ:
+        case TACOp::SHL:
             add(i.src1); add(i.src2); break;
         case TACOp::COPY: case TACOp::BRANCH_EQ0:
         case TACOp::PARAM: case TACOp::RETURN:

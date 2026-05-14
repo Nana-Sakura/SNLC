@@ -59,6 +59,47 @@ void TACCodeGen::linkBlocks() {
     }
 }
 
+// ─── 局部 CSE：仅在基本块内消除重复表达式 ───────────────────────────────
+void TACCodeGen::cseBlocks(std::vector<BasicBlock>& blocks) {
+    auto isCommutative = [](TACOp op) {
+        return op == TACOp::ADD || op == TACOp::MUL || op == TACOp::SEQ;
+    };
+
+    auto isCseOp = [](TACOp op) {
+        return op == TACOp::ADD || op == TACOp::SUB || op == TACOp::MUL
+            || op == TACOp::DIV || op == TACOp::SLT || op == TACOp::SEQ
+            || op == TACOp::SHL;
+    };
+
+    for (auto& bb : blocks) {
+        std::unordered_map<std::string, std::string> expr2vreg;
+        for (auto& instr : bb.instrs) {
+            if (!isCseOp(instr.op) || instr.dst.empty()) continue;
+
+            std::string s1 = instr.src1;
+            std::string s2 = instr.src2;
+            int imm = instr.imm;
+
+            if (isCommutative(instr.op) && s2 < s1) std::swap(s1, s2);
+
+            std::string key;
+            if (instr.op == TACOp::SHL) {
+                key = std::to_string((int)instr.op) + "|" + s1 + "|" + std::to_string(imm);
+            } else {
+                key = std::to_string((int)instr.op) + "|" + s1 + "|" + s2;
+            }
+
+            auto it = expr2vreg.find(key);
+            if (it != expr2vreg.end()) {
+                instr = TACInstr::make(TACOp::COPY, instr.dst, it->second);
+                continue;
+            }
+
+            expr2vreg[key] = instr.dst;
+        }
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 第一趟：AST → TAC
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -436,10 +477,8 @@ std::string TACCodeGen::tacIndexAddr(ASTNode* node) {
     }
 
     // byte offset = index * 4
-    std::string four = newVReg();
-    emit(TACInstr::make(TACOp::LOAD_IMM, four, "", "", 4));
     std::string off = newVReg();
-    emit(TACInstr::make(TACOp::MUL, off, idx, four));
+    emit(TACInstr::make(TACOp::SHL, off, idx, "", 2));
 
     // addr = baseAddr + off
     std::string addr = newVReg();
@@ -488,10 +527,8 @@ std::string TACCodeGen::tacFieldAddr(ASTNode* node) {
     // FieldVarMore（字段本身是数组）
     if (node->children.size() > 1) {
         std::string idx = tacExp(node->children[1].get());
-        std::string four = newVReg();
-        emit(TACInstr::make(TACOp::LOAD_IMM, four, "", "", 4));
         std::string off = newVReg();
-        emit(TACInstr::make(TACOp::MUL, off, idx, four));
+        emit(TACInstr::make(TACOp::SHL, off, idx, "", 2));
         std::string newAddr = newVReg();
         emit(TACInstr::make(TACOp::ADD, newAddr, addr, off));
         addr = newAddr;

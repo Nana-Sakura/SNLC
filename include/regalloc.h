@@ -16,6 +16,7 @@
 enum class TACOp {
     // 算术
     ADD, SUB, MUL, DIV,
+    SHL,
     // 比较（结果 0/1）
     SLT, SEQ,
     // 数据移动

@@ -51,6 +51,7 @@ private:
 
     // 连接基本块控制流
     void linkBlocks();
+    void cseBlocks(std::vector<BasicBlock>& blocks);
 
     // AST → TAC
     void        tacProgram(ASTNode* node);

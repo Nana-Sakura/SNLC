@@ -8,6 +8,9 @@
 void TACCodeGen::emitProc(const std::string& procLabel,
                             int localBytes,
                             std::vector<BasicBlock>& blocks) {
+    // 0. 基本块内公共子表达式消除
+    cseBlocks(blocks);
+
     // 1. 图着色寄存器分配
     RegAllocator ra;
     allocation_ = ra.allocate(blocks);
@@ -61,6 +64,7 @@ void TACCodeGen::emitEpilogue(int fsize) {
     emitLine("lw    $fp, " + std::to_string(fsize - 8) + "($sp)");
     emitLine("addiu $sp, $sp, " + std::to_string(fsize));
     emitLine("jr    $ra");
+    emitLine("nop");
 }
 
 // ─── 虚拟寄存器解析 ───────────────────────────────────────────────────────────
@@ -156,10 +160,12 @@ void TACCodeGen::emitInstr(const TACInstr& I) {
 
         // ── 算术运算 ──────────────────────────────────────────────────────
         case TACOp::ADD: case TACOp::SUB: case TACOp::MUL: case TACOp::DIV:
-        case TACOp::SLT: case TACOp::SEQ: {
+        case TACOp::SLT: case TACOp::SEQ: case TACOp::SHL: {
             std::string l = resolve(I.src1, true, "$t8");
-            std::string r = resolve(I.src2, true, "$t9");
             std::string d = resolve(I.dst,  false, "$t8");
+            std::string r;
+            if (I.op != TACOp::SHL)
+                r = resolve(I.src2, true, "$t9");
             // l 和 d 可能都是 $t8，r 先算好在 $t9 里，所以顺序没问题
             switch (I.op) {
                 case TACOp::ADD: emitLine("add   " + d + ", " + l + ", " + r); break;
@@ -176,6 +182,9 @@ void TACCodeGen::emitInstr(const TACInstr& I) {
                     emitLine("xor   " + d + ", " + l + ", " + r);
                     emitLine("sltiu " + d + ", " + d + ", 1");
                     break;
+                case TACOp::SHL:
+                    emitLine("sll   " + d + ", " + l + ", " + std::to_string(I.imm));
+                    break;
                 default: break;
             }
             writeback(I.dst, d);
@@ -185,11 +194,13 @@ void TACCodeGen::emitInstr(const TACInstr& I) {
         // ── 控制流 ────────────────────────────────────────────────────────
         case TACOp::JUMP:
             emitLine("j     " + I.label);
+            emitLine("nop");
             break;
 
         case TACOp::BRANCH_EQ0: {
             std::string cond = resolve(I.src1, true, "$t8");
             emitLine("beqz  " + cond + ", " + I.label);
+            emitLine("nop");
             break;
         }
 
@@ -200,10 +211,12 @@ void TACCodeGen::emitInstr(const TACInstr& I) {
         // ── 调用 ──────────────────────────────────────────────────────────
         case TACOp::CALL:
             emitLine("jal   " + I.src1);
+            emitLine("nop");
             break;
 
         case TACOp::RETURN:
             emitLine("j     __ret_" + currentProcLabel_);
+            emitLine("nop");
             break;
 
         // ── syscall ───────────────────────────────────────────────────────
