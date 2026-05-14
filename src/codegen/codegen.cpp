@@ -297,7 +297,7 @@ CodeGen::genCall(ASTNode* node)
   emitComment("call " + node->name);
   // 找过程的参数信息（判断哪些是 VAR 参数）
   Symbol* procSym = current_->lookup(node->name);
-  Scope* procScope = nullptr;
+  [[maybe_unused]] Scope* procScope = nullptr;
   auto it = procScopeMap_.find(node->name);
   if(it != procScopeMap_.end())
     procScope = it->second;

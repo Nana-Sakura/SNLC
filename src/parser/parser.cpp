@@ -117,7 +117,6 @@ Parser::parseDeclarePart()
 ASTPtr
 Parser::parseProgramBody()
 {
-  int line = peek().line;
   expect(TokenType::KW_BEGIN, "期望 'begin'");
   auto body = parseStmList();
   expect(TokenType::KW_END, "期望 'end'");
