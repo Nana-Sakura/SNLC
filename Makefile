@@ -90,11 +90,11 @@ format:
 	@echo "Formatting source files with clang-format..."
 	@./autoformat.sh
 
-compiletest:
+compiletest: $(TARGET)
 	./CompileTest.sh
 
 outputtest:
 	./OutputTest.sh
 
 clean:
-	rm -f $(OBJS) $(TARGET) tests/*.asm tmp/*.asm
+	rm -f $(OBJS) $(TARGET) tests/*.asm tmp/*.asm tmp/*.actual tmp/*.log
