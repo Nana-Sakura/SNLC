@@ -51,7 +51,7 @@ main(int argc, char* argv[])
   std::string srcFile, outFile = "out.asm";
   bool lexOnly = false, parseOnly = false, semOnly = false, verbose = false;
   bool useRegAlloc = true;
-  bool useLL1 = true; // ← 新增
+  bool useLL1 = false; // ← 新增
 
   for(int i = 1; i < argc; ++i)
     {
@@ -70,7 +70,7 @@ main(int argc, char* argv[])
       else if(std::strcmp(argv[i], "--no-regalloc") == 0)
         useRegAlloc = false;
       else if(std::strcmp(argv[i], "--ll1") == 0) // ← 新增
-        useLL1 = false;
+        useLL1 = true;
       else
         srcFile = argv[i];
     }
