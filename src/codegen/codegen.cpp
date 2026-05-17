@@ -516,6 +516,11 @@ CodeGen::genExp(ASTNode* node, const std::string& dest)
       emit("li    " + d + ", " + std::to_string(node->ival));
       return d;
 
+    // ── 字符字面量 ────────────────────────────────────────────────────
+    case NodeKind::CHAR_LITERAL:
+      emit("li    " + d + ", " + std::to_string(node->ival)); // ival = ASCII 值
+      return d;
+
     // ── 二元运算（含比较）────────────────────────────────────────────
     case NodeKind::BINARY_EXP:
       {

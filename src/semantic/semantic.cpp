@@ -477,6 +477,9 @@ SemanticAnalyzer::visitExp(ASTNode* node)
     case NodeKind::INT_LITERAL:
       node->typeInfo = TypeDesc::makeInt();
       return node->typeInfo;
+    case NodeKind::CHAR_LITERAL:
+      node->typeInfo = TypeDesc::makeChar();
+      return node->typeInfo;
     case NodeKind::BINARY_EXP:
       {
         auto lt = node->children.size() > 0 ? visitExp(node->children[0].get())

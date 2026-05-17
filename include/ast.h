@@ -76,6 +76,7 @@ enum class NodeKind
   BINARY_EXP,
   UNARY_EXP,
   INT_LITERAL,
+  CHAR_LITERAL,
   VAR_EXP,
 
   // 变量访问

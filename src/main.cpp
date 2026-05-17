@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <lexer.h>
+#include <ll1_parser.h> // ← 新增
 #include <optimizer.h>
 #include <parser.h>
 #include <semantic.h>
@@ -20,6 +21,7 @@ printUsage(const char* prog)
             << "  --sem-only     词法+语法+语义分析（不生成代码）\n"
             << "  --opt-regalloc 开启 TAC + 寄存器分配（默认开启）\n"
             << "  --no-regalloc  关闭寄存器分配，使用原始代码生成\n"
+            << "  --ll1          使用表驱动 LL(1) 解析器（默认递归下降）\n"
             << "  -v             详细模式（打印各阶段信息）\n";
 }
 
@@ -49,6 +51,7 @@ main(int argc, char* argv[])
   std::string srcFile, outFile = "out.asm";
   bool lexOnly = false, parseOnly = false, semOnly = false, verbose = false;
   bool useRegAlloc = true;
+  bool useLL1 = true; // ← 新增
 
   for(int i = 1; i < argc; ++i)
     {
@@ -66,6 +69,8 @@ main(int argc, char* argv[])
         useRegAlloc = true;
       else if(std::strcmp(argv[i], "--no-regalloc") == 0)
         useRegAlloc = false;
+      else if(std::strcmp(argv[i], "--ll1") == 0) // ← 新增
+        useLL1 = false;
       else
         srcFile = argv[i];
     }
@@ -103,13 +108,33 @@ main(int argc, char* argv[])
 
   // ── 阶段二：语法分析 ────────────────────────────────────────────────────
   if(verbose)
-    std::cout << "\n=== 语法分析 ===\n";
-  Parser parser(std::move(tokens));
-  auto ast = parser.parseProgram();
+    std::cout << "\n=== 语法分析（" << (useLL1 ? "表驱动 LL(1)" : "递归下降")
+              << "）===\n";
 
-  if(parser.hasError())
+  ASTPtr ast;
+  bool parseHasError = false;
+  std::vector<std::string> parseErrors;
+
+  if(useLL1)
     {
-      for(auto& e : parser.errors())
+      // 表驱动 LL(1)：tokens 不 move，LL1Parser 内部持有副本
+      LL1Parser parser(tokens);
+      ast = parser.parseProgram();
+      parseHasError = parser.hasError();
+      parseErrors = parser.errors();
+    }
+  else
+    {
+      // 递归下降（原有路径）
+      Parser parser(std::move(tokens));
+      ast = parser.parseProgram();
+      parseHasError = parser.hasError();
+      parseErrors = parser.errors();
+    }
+
+  if(parseHasError)
+    {
+      for(auto& e : parseErrors)
         std::cerr << e << "\n";
       return 1;
     }
@@ -132,17 +157,15 @@ main(int argc, char* argv[])
     {
       for(auto& e : sem.errors())
         std::cerr << e << "\n";
-      // 非致命：继续生成代码（调试模式）
       if(!verbose)
         return 1;
     }
   if(semOnly)
     return 0;
 
-  // ── 阶段三·五：优化（常量折叠 + 代数化简 + LICM）────────────────────
+  // ── 阶段三·五：优化 ─────────────────────────────────────────────────────
   Optimizer opt;
-  opt.optimize(ast.get(),
-               sem.globalScope()); // 传入 scope 供 LICM 注册临时变量
+  opt.optimize(ast.get(), sem.globalScope());
   if(verbose)
     {
       std::cout << "\n=== 优化 ===\n";
@@ -157,12 +180,9 @@ main(int argc, char* argv[])
   std::string asmCode;
   if(useRegAlloc)
     {
-      // 图着色寄存器分配路径
       TACCodeGen cg(sem.globalScope());
       for(auto& [name, scope] : sem.procScopes())
         cg.registerProcScope(name, scope);
-      // 传递参数顺序（从旧 CodeGen 的 procParamOrder_ 复用语义信息）
-      // 这里直接在 TACCodeGen 里重建（已有 procScopeMap_ 和 AST）
       for(auto& [name, scope] : sem.procScopes())
         {
           std::vector<Symbol*> order;
@@ -179,14 +199,12 @@ main(int argc, char* argv[])
     }
   else
     {
-      // 原始路径（push/pop 栈）
       CodeGen cg(sem.globalScope());
       for(auto& [name, scope] : sem.procScopes())
         cg.registerProcScope(name, scope);
       asmCode = cg.generate(ast.get());
     }
 
-  // 写输出文件
   std::ofstream out(outFile);
   if(!out)
     {

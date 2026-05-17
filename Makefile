@@ -4,23 +4,13 @@ INCLUDES := -Iinclude
 
 TARGET := snlc
 
-SRCS := src/main.cpp \
-        src/lexer/token.cpp \
-        src/lexer/lexer.cpp \
-        src/parser/ast.cpp \
-        src/parser/parser.cpp \
-        src/semantic/semantic.cpp \
-        src/codegen/codegen.cpp \
-        src/optimizer/optimizer.cpp \
-        src/optimizer/regalloc.cpp \
-        src/codegen/taccodegen_pass1.cpp \
-        src/codegen/taccodegen_pass2.cpp
+SRCS := $(shell find src -name "*.cpp")
 
 OBJS := $(SRCS:.cpp=.o)
 
 SIM := python3 tools/mips_sim.py
 
-.PHONY: all clean test release
+.PHONY: all clean test release format compiletest outputtest
 
 all: $(TARGET)
 
@@ -95,6 +85,16 @@ ast-test: $(TARGET)
 release: CXXFLAGS = -std=c++17 -O2 -Wall
 release: clean $(TARGET)
 	@echo "Release build: $(TARGET)"
+
+format:
+	@echo "Formatting source files with clang-format..."
+	@./autoformat.sh
+
+compiletest:
+	./CompileTest.sh
+
+outputtest:
+	./OutputTest.sh
 
 clean:
 	rm -f $(OBJS) $(TARGET) tests/*.asm /tmp/snl_test.asm

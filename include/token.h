@@ -30,8 +30,9 @@ enum class TokenType
   KW_RETURN,
 
   // 标识符 / 字面量
-  ID,   // 变量名、函数名等
-  INTC, // 整型常量
+  ID,    // 变量名、函数名等
+  INTC,  // 整型常量
+  CHARC, // 字符字面量，如 'a'
 
   // 运算符
   ASSIGN, // :=

@@ -113,9 +113,20 @@ Parser::parseDeclarePart()
   return node;
 }
 
-// ProgramBody ::= BEGIN StmList END
+// ProgramBody ::= BEGIN StmList END .   （顶层程序，结尾为 end.）
 ASTPtr
 Parser::parseProgramBody()
+{
+  expect(TokenType::KW_BEGIN, "期望 'begin'");
+  auto body = parseStmList();
+  expect(TokenType::KW_END, "期望 'end'");
+  expect(TokenType::DOT, "期望 '.'（程序结束标志 'end.'）");
+  return body;
+}
+
+// ProcBody ::= BEGIN StmList END       （过程体，结尾只有 end，不带 '.'）
+ASTPtr
+Parser::parseProcBody()
 {
   expect(TokenType::KW_BEGIN, "期望 'begin'");
   auto body = parseStmList();
@@ -323,7 +334,7 @@ Parser::parseProcDec()
       proc->name = procName.value;
       proc->children.push_back(std::move(params));  // 参数
       proc->children.push_back(parseDeclarePart()); // ProcDecPart
-      proc->children.push_back(parseProgramBody()); // ProcBody
+      proc->children.push_back(parseProcBody());    // ProcBody（BEGIN...END，无点号）
 
       node->children.push_back(std::move(proc));
     }
@@ -622,6 +633,14 @@ Parser::parseFactor()
       auto node = makeNode(NodeKind::INT_LITERAL, tok.line);
       node->ival = std::stoi(tok.value);
       node->name = tok.value;
+      return node;
+    }
+  if(check(TokenType::CHARC))
+    {
+      auto tok = advance();
+      auto node = makeNode(NodeKind::CHAR_LITERAL, tok.line);
+      node->name = tok.value;
+      node->ival = static_cast<int>(tok.value[0]);
       return node;
     }
   return parseVariable();

@@ -51,6 +51,8 @@ tokenTypeName(TokenType t)
       return "ID";
     case TokenType::INTC:
       return "INTC";
+    case TokenType::CHARC:
+      return "CHARC";
     case TokenType::ASSIGN:
       return "ASSIGN(:=)";
     case TokenType::LT:

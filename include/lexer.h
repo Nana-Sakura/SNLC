@@ -43,6 +43,7 @@ private:
   // 各类 Token 的扫描函数
   Token readIdentifierOrKeyword();
   Token readNumber();
+  Token readCharLiteral();
   Token readOperatorOrPunct();
 
   // 报错并返回 ERROR token

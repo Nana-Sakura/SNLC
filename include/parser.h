@@ -25,7 +25,7 @@ public:
     return errors_;
   }
 
-private:
+protected:
   std::vector<Token> tokens_;
   size_t pos_ = 0;
   std::vector<std::string> errors_;
@@ -43,7 +43,8 @@ private:
   // Program ::= ProgramHead DeclarePart ProgramBody
   ASTPtr parseProgramHead(); // 规则 2-3
   ASTPtr parseDeclarePart(); // 规则 4
-  ASTPtr parseProgramBody(); // 规则 57
+  ASTPtr parseProgramBody(); // 规则 57（顶层，结尾要求 'end.'）
+  ASTPtr parseProcBody();    // 规则 56（过程体，结尾只要求 'end'）
 
   // 类型声明
   ASTPtr parseTypeDec();       // 规则 6-7

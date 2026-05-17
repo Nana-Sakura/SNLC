@@ -69,6 +69,8 @@ nodeKindName(NodeKind k)
       return "UnaryExp";
     case NodeKind::INT_LITERAL:
       return "IntLiteral";
+    case NodeKind::CHAR_LITERAL:
+      return "CharLiteral";
     case NodeKind::VAR_EXP:
       return "VarExp";
     case NodeKind::SIMPLE_VAR:

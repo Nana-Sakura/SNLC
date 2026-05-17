@@ -452,6 +452,13 @@ TACCodeGen::tacExp(ASTNode* node)
         return d;
       }
 
+    case NodeKind::CHAR_LITERAL:
+      {
+        std::string d = newVReg();
+        emit(TACInstr::make(TACOp::LOAD_IMM, d, "", "", node->ival)); // ival = ASCII 值
+        return d;
+      }
+
     case NodeKind::BINARY_EXP:
       {
         if(node->children.size() < 2)

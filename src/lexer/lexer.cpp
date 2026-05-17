@@ -34,8 +34,8 @@ Lexer::nextToken()
 
   char c = peek();
 
-  // 标识符或关键字
-  if(std::isalpha(c) || c == '_')
+  // 标识符或关键字（SNL 标识符以字母开头，只含字母和数字，不允许下划线）
+  if(std::isalpha(c))
     {
       return readIdentifierOrKeyword();
     }
@@ -44,6 +44,12 @@ Lexer::nextToken()
   if(std::isdigit(c))
     {
       return readNumber();
+    }
+
+  // 字符字面量：'x'（单引号包围的单个可打印字符）
+  if(c == '\'')
+    {
+      return readCharLiteral();
     }
 
   // 运算符和标点
@@ -119,9 +125,17 @@ Lexer::readIdentifierOrKeyword()
 {
   int startLine = line_, startCol = col_;
   std::string val;
-  while(pos_ < src_.size() && (std::isalnum(peek()) || peek() == '_'))
+  // SNL 标识符：字母开头，后续只允许字母或数字（不允许下划线）
+  while(pos_ < src_.size() && std::isalnum(peek()))
     {
       val += advance();
+    }
+  // 若紧跟下划线，报错
+  if(pos_ < src_.size() && peek() == '_')
+    {
+      return makeError("第 " + std::to_string(startLine) + " 行 "
+                       + std::to_string(startCol)
+                       + " 列：标识符不能包含下划线 '_'（SNL 标识符格式：字母{字母|数字}）");
     }
 
   // SNL 关键字不区分大小写：统一转小写后查表
@@ -152,8 +166,36 @@ Lexer::readNumber()
   return makeToken(TokenType::INTC, val, startLine, startCol);
 }
 
-// ─── 运算符和标点
-// ──────────────────────────────────────────────────────────────
+// ─── 字符字面量：'x'
+// ─────────────────────────────────────────────────────────────────
+Token
+Lexer::readCharLiteral()
+{
+  int startLine = line_, startCol = col_;
+  advance(); // 消耗开头的 '\''
+
+  if(pos_ >= src_.size() || peek() == '\n' || peek() == '\'')
+    {
+      return makeError("第 " + std::to_string(startLine) + " 行 "
+                       + std::to_string(startCol)
+                       + " 列：字符字面量不能为空");
+    }
+
+  char ch = advance(); // 消耗字符本体
+
+  if(pos_ >= src_.size() || peek() != '\'')
+    {
+      return makeError("第 " + std::to_string(startLine) + " 行 "
+                       + std::to_string(startCol)
+                       + " 列：字符字面量未闭合（缺少结尾 \"'\"）");
+    }
+  advance(); // 消耗结尾的 '\''
+
+  std::string val(1, ch);
+  return makeToken(TokenType::CHARC, val, startLine, startCol);
+}
+
+
 Token
 Lexer::readOperatorOrPunct()
 {
@@ -208,6 +250,18 @@ Lexer::readOperatorOrPunct()
       return makeToken(TokenType::DOT, ".", startLine, startCol);
 
     default:
+      // 双引号：给出专门提示（SNL 不支持字符串字面量）
+      if(c == '"')
+        {
+          // 跳过整个双引号串，避免后续每个字符都报错
+          while(pos_ < src_.size() && peek() != '"' && peek() != '\n')
+            advance();
+          if(pos_ < src_.size() && peek() == '"')
+            advance(); // 消耗结尾双引号
+          return makeError("第 " + std::to_string(startLine) + " 行 "
+                           + std::to_string(startCol)
+                           + " 列：SNL 不支持字符串字面量，字符请用单引号，如 'a'");
+        }
       return makeError("第 " + std::to_string(startLine) + " 行 "
                        + std::to_string(startCol) + " 列：未知字符 '" + c
                        + "'");
