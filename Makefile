@@ -97,4 +97,4 @@ outputtest:
 	./OutputTest.sh
 
 clean:
-	rm -f $(OBJS) $(TARGET) tests/*.asm /tmp/snl_test.asm
+	rm -f $(OBJS) $(TARGET) tests/*.asm tmp/*.asm

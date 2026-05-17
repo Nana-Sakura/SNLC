@@ -416,7 +416,18 @@ SemanticAnalyzer::visitStm(ASTNode* node)
       {
         if(node->children.size() < 2)
           break;
-        auto lhsType = visitVariable(node->children[0].get());
+        // 第7条：赋值左端必须是变量标识符（不能是类型名或过程名）
+        ASTNode* lhsNode = node->children[0].get();
+        if(lhsNode->kind == NodeKind::SIMPLE_VAR)
+          {
+            auto* sym = current_->lookup(lhsNode->name);
+            if(sym && (sym->kind == SymKind::TYPE || sym->kind == SymKind::PROC))
+              {
+                error("赋值左端 '" + lhsNode->name + "' 不是变量标识符", node->line);
+                break;
+              }
+          }
+        auto lhsType = visitVariable(lhsNode);
         auto rhsType = visitExp(node->children[1].get());
         if(lhsType && rhsType && !typeCompatible(lhsType.get(), rhsType.get()))
           error("赋值两侧类型不兼容", node->line);
@@ -425,7 +436,13 @@ SemanticAnalyzer::visitStm(ASTNode* node)
     case NodeKind::IF_STM:
       if(node->children.size() >= 3)
         {
-          visitExp(node->children[0].get());
+          // 第11条：if 条件必须是比较表达式（BINARY_EXP with < or =）
+          ASTNode* cond = node->children[0].get();
+          if(!cond || cond->kind != NodeKind::BINARY_EXP
+             || (cond->name != "<" && cond->name != "="))
+            error("if 条件部分不是合法的布尔（比较）表达式", node->line);
+          else
+            visitExp(cond);
           visitStmList(node->children[1].get());
           visitStmList(node->children[2].get());
         }
@@ -433,7 +450,13 @@ SemanticAnalyzer::visitStm(ASTNode* node)
     case NodeKind::WHILE_STM:
       if(node->children.size() >= 2)
         {
-          visitExp(node->children[0].get());
+          // 第11条：while 条件必须是比较表达式
+          ASTNode* cond = node->children[0].get();
+          if(!cond || cond->kind != NodeKind::BINARY_EXP
+             || (cond->name != "<" && cond->name != "="))
+            error("while 条件部分不是合法的布尔（比较）表达式", node->line);
+          else
+            visitExp(cond);
           visitStmList(node->children[1].get());
         }
       break;
@@ -452,10 +475,55 @@ SemanticAnalyzer::visitStm(ASTNode* node)
     case NodeKind::CALL_STM:
       {
         auto* sym = current_->lookup(node->name);
-        if(!sym || sym->kind != SymKind::PROC)
-          error("未定义的过程：" + node->name, node->line);
-        for(auto& arg : node->children)
-          visitExp(arg.get());
+        // 第10条：调用的必须是过程标识符
+        if(!sym)
+          {
+            error("未定义的标识符：" + node->name, node->line);
+            break;
+          }
+        if(sym->kind != SymKind::PROC)
+          {
+            error("'" + node->name + "' 不是过程标识符，不能调用", node->line);
+            break;
+          }
+
+        // 收集形参列表
+        std::vector<Symbol*> formalParams;
+        auto it = procScopes_.find(node->name);
+        if(it != procScopes_.end())
+          {
+            Scope* procScope = it->second;
+            // 按 offset 从大到小排（offset 越大越靠前声明）
+            for(auto& [n, s] : procScope->table)
+              if(s.kind == SymKind::PARAM || s.kind == SymKind::VAR_PARAM)
+                formalParams.push_back(&s);
+            std::sort(formalParams.begin(), formalParams.end(),
+                      [](Symbol* a, Symbol* b) { return a->offset > b->offset; });
+          }
+
+        // 第9条：实参个数必须与形参个数相同
+        if(node->children.size() != formalParams.size())
+          {
+            error("过程 '" + node->name + "' 调用时实参个数（"
+                  + std::to_string(node->children.size()) + "）与形参个数（"
+                  + std::to_string(formalParams.size()) + "）不符",
+                  node->line);
+            // 仍然遍历实参做类型检查
+            for(auto& arg : node->children)
+              visitExp(arg.get());
+            break;
+          }
+
+        // 第8条：逐一检查实参与形参类型是否匹配
+        for(size_t i = 0; i < node->children.size(); ++i)
+          {
+            auto argType = visitExp(node->children[i].get());
+            if(argType && formalParams[i]->type
+               && !typeCompatible(argType.get(), formalParams[i]->type.get()))
+              error("过程 '" + node->name + "' 第 " + std::to_string(i + 1)
+                    + " 个实参类型与形参不匹配",
+                    node->children[i]->line);
+          }
         break;
       }
     default:
@@ -536,6 +604,21 @@ SemanticAnalyzer::visitVariable(ASTNode* node)
         error("下标访问的对象不是数组", node->line);
       if(idxType && idxType->kind != TypeKind::INTEGER)
         error("数组下标必须是整型", node->line);
+      // 第4条：编译期常量下标越界检查
+      if(baseType && baseType->kind == TypeKind::ARRAY
+         && node->children.size() > 1)
+        {
+          ASTNode* idxNode = node->children[1].get();
+          if(idxNode && idxNode->kind == NodeKind::INT_LITERAL)
+            {
+              int idx = idxNode->ival;
+              if(idx < baseType->low || idx > baseType->top)
+                error("数组下标 " + std::to_string(idx) + " 越界（合法范围 "
+                      + std::to_string(baseType->low) + ".."
+                      + std::to_string(baseType->top) + "）",
+                      node->line);
+            }
+        }
       if(baseType && baseType->kind == TypeKind::ARRAY)
         {
           node->typeInfo = baseType->elemType;
